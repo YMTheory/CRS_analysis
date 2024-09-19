@@ -28,6 +28,7 @@ class loader:
         self.peaking_time       = peaking_time
         self.sampling_rate      = sampling_rate
 
+        self.baseline_channels = [[] for i in range(64)]
 
     def _set_waveform_filename(self, file):
         self.filename = file
@@ -137,6 +138,10 @@ class loader:
             return False
         else:
             return True
+
+    def time_to_sample(self, t):
+        idx = (np.abs(np.asarray(self.times) - t)).argmin()
+        return idx
         
     def baseline_onechannel_oneevent(self, evno, ch):
         wf = self.df['Data'].iloc[evno][ch]
@@ -156,6 +161,16 @@ class loader:
             for ch in range(len(waves)):
                 base = self.baseline_onechannel_oneevent(i, ch)
                 row["Data"][ch] = np.array(waves[ch]) - base
+
+    
+    def baseline_subtract_segmented(self):
+        index_range = [self.time_to_sample(self.config['baseline'][0]), self.time_to_sample(self.config['baseline'][1])]
+        for i, row in self.df.iterrows():
+            waves = row['Data']
+            for ch in range(len(waves)):
+                base = np.mean(waves[ch][index_range[0]:index_range[1]])
+                self.baseline_channels[ch].append(base) 
+                row['Data'][ch] = np.array(waves[ch]) - base
         
 
     def shift_channels(self):
