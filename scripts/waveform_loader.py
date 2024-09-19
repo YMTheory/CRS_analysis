@@ -158,6 +158,22 @@ class loader:
                 row["Data"][ch] = np.array(waves[ch]) - base
         
 
+    def shift_channels(self):
+        xchmap_new = {}
+        for k, v in self.chmap[0]['xstrips'].items():
+            k1 = k + self.chmap[0]['xshifts']
+            xchmap_new[k1] = v
+        ychmap_new = {}
+        for k, v in self.chmap[0]['ystrips'].items():
+            k1 = k + self.chmap[0]['yshifts']
+            ychmap_new[k1] = v
+            
+        self.chmap[0]['xstrips'] = xchmap_new
+        self.chmap[0]['ystrips'] = ychmap_new
+        print(f"Channel shifts (x->{self.chmap[0]['xshifts']}, y->{self.chmap[0]['yshifts']}) have been included.")
+            
+            
+            
             
     def plot_waves(self, evno, chs_to_plot=[], window=[], title='', adc_shift=20):
         if evno < 0:
