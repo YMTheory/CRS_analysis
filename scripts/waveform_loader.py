@@ -190,3 +190,83 @@ class loader:
         plt.tight_layout()
         plt.show()
         return fig
+    
+    
+    def plot_strip_waveforms_separated(self, evno, fmt=None, fig=None, ax=None, show=True, sep=None):
+        if evno < 0:
+            evno = 0
+        if evno > self.nevents_total:
+            print(f"Event {evno} is out of range of the dataframe.")
+            return
+        ev = self.create_df_from_event(evno)
+        nsamp = len(ev['Data'].iloc[0])
+        times = np.arange(0, nsamp*self.dT, self.dT)
+        
+        xstrip_mask = (ev['ChannelType'] == 'x')
+        ystrip_mask = (ev['ChannelType'] == 'y')
+        xdf = ev[xstrip_mask]
+        ydf = ev[ystrip_mask]
+
+        xstrip_img = np.zeros((len(xdf.index), len(times)))
+        ystrip_img = np.zeros((len(ydf.index), len(times)))
+        xpos, ypos, xchs, ychs = [], [], [], []
+
+        for i, row in xdf.iterrows():
+            xpos.append(row['ChannelPos'][1])
+            xchs.append(row['Channel'])
+        # sort the lists by position
+        xpos, xchs = (list(t) for t in zip(*sorted(zip(xpos, xchs))))
+        for i, row in xdf.iterrows():
+            wave = row['Data']
+            ch_idx = xchs.index(row['Channel'])
+            for j in range(len(wave)):
+                xstrip_img[ch_idx][j] = wave[j] * self.config['mv_per_adc']
+
+        for i, row in ydf.iterrows():
+            ypos.append(row['ChannelPos'][0])
+            ychs.append(row['Channel'])
+        # sort the lists by position
+        ypos, ychs = (list(t) for t in zip(*sorted(zip(ypos, ychs))))
+        for i, row in ydf.iterrows():
+            wave = row['Data']
+            ch_idx = ychs.index(row['Channel'])
+            for j in range(len(wave)):
+                ystrip_img[ch_idx][j] = wave[j] * self.config['mv_per_adc']
+        
+        
+        if sep == None:
+            mv_shift = 50 # unit ADC
+        else:
+            mv_shift = sep
+            
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(12, 16), nrows=2)
+        
+        curshift = 0.
+        if fmt is None:
+            fmt = '-'
+        for i in range(len(xstrip_img)):
+            if (xchs[i] in self.config['dead_channels'] or xchs[i] == self.config['key_channel']):
+                ax[0].plot(times, np.array(xstrip_img[i] + curshift), 'k', label=str(xpos[i]))
+            else:
+                ax[0].plot(times, np.array(xstrip_img[i] + curshift), fmt, label=str(xpos[i]))
+            curshift += mv_shift
+
+        curshift = 0
+        for i in range(len(ystrip_img)):
+            if (ychs[i] in self.config['dead_channels'] or ychs[i] == self.config['key_channel']):
+                ax[1].plot(times, np.array(ystrip_img[i] + curshift), 'k', label=str(ypos[i]))
+            else:
+                ax[1].plot(times, np.array(ystrip_img[i] + curshift), fmt, label=str(ypos[i]))
+            curshift += mv_shift
+
+        ax[0].set_xlabel('time [us]', fontsize=13)
+        ax[0].set_title(f'X-strips, event {evno}', fontsize=13)
+        ax[0].set_ylabel('shfited mV', fontsize=13)
+        ax[1].set_xlabel('time [us]', fontsize=13)
+        ax[1].set_title(f'Y-strips, event {evno}', fontsize=13)
+        ax[1].set_ylabel('shfited mV', fontsize=13)
+
+        if show:
+            plt.show()
+        return fig, ax
