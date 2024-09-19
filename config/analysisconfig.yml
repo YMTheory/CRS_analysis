@@ -1,0 +1,6 @@
+chmap: ../config/channelmap.yml
+pulse_threshold: 6 #in multiples of the standard deviation of the baseline
+mv_per_adc: 0.439453 #mV/adc
+key_channel: None
+dead_channels: []
+asic: 0
